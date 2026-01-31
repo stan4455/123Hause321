@@ -12,6 +12,22 @@ import {
 } from "./trading.js";
 import { PriceProvider } from "./price.js";
 
+/**
+ * Raydium Perps Scalping Bot
+ * 
+ * Strategy: Flip-on-loss EMA-based scalping
+ * - Uses EMA fast/slow crossover to determine initial trend bias
+ * - First trade: follows trend direction (UP=LONG, DOWN=SHORT)
+ * - After TP: continues in SAME direction (ignores trend changes)
+ * - After SL: flips direction LONG<->SHORT (ignores trend changes)
+ * - This creates a "flip-on-loss" pattern that continues until a TP occurs
+ * 
+ * Safety features:
+ * - Kill switch for daily loss, consecutive losses, consecutive errors
+ * - Trading rate limiter
+ * - Mandatory cooldown between trades
+ * - TP/SL at configurable basis points (default: 10 bps = 0.10%)
+ */
 export class RaydiumScalpingBot {
   private config: Config;
   private state: BotState;
@@ -29,7 +45,7 @@ export class RaydiumScalpingBot {
     this.state = {
       position: null,
       trades: [],
-      currentDirection: "LONG", // Start with LONG bias
+      currentDirection: "LONG", // Will be set based on first trend signal
       initialEquity,
       currentEquity: initialEquity,
       dailyStartEquity: initialEquity,
@@ -167,14 +183,20 @@ export class RaydiumScalpingBot {
       return;
     }
     
-    // Determine direction based on current bias and trend
-    // Note: currentDirection is our bias (set by flip-on-loss logic)
-    // We still respect the trend for initial direction
-    const trendDirection: Direction = trend === "UP" ? "LONG" : "SHORT";
+    // Determine direction based on strategy:
+    // - First trade: use trend direction
+    // - After TP: continue in same direction (ignore trend)
+    // - After SL: use flipped direction (ignore trend)
+    let direction: Direction;
     
-    // If we have no trades yet, use trend direction
-    // Otherwise, use currentDirection (which flips on SL)
-    const direction = this.state.trades.length === 0 ? trendDirection : this.state.currentDirection;
+    if (this.state.trades.length === 0) {
+      // First trade: use trend
+      direction = trend === "UP" ? "LONG" : "SHORT";
+      this.state.currentDirection = direction;
+    } else {
+      // Subsequent trades: use currentDirection (set by flip-on-loss logic)
+      direction = this.state.currentDirection;
+    }
     
     await this.openPosition(currentPrice, direction);
   }
