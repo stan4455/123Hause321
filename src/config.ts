@@ -1,3 +1,8 @@
+import dotenv from "dotenv";
+
+// Load .env file
+dotenv.config();
+
 export interface Config {
   // Connection
   rpcUrl: string;
@@ -57,6 +62,17 @@ export function loadConfig(): Config {
   const mode = getEnv("MODE", "quote");
   if (!["quote", "paper", "live"].includes(mode)) {
     throw new Error(`Invalid MODE: ${mode}. Must be quote, paper, or live.`);
+  }
+  
+  // Safety check: Live trading requires explicit LIVE_TRADING=1 flag
+  if (mode === "live") {
+    const liveTradingFlag = process.env.LIVE_TRADING;
+    if (liveTradingFlag !== "1") {
+      throw new Error(
+        "Live trading mode requires explicit LIVE_TRADING=1 environment variable. " +
+        "This is a safety measure to prevent accidental real trading."
+      );
+    }
   }
   
   return {
