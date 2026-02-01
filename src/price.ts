@@ -26,10 +26,14 @@ export class PriceProvider {
   async getIndexPrice(): Promise<number> {
     if (this.config.mode === "quote" || this.config.mode === "paper") {
       return this.simulatePrice();
-    } else {
-      // In live mode, this would call Raydium API
-      throw new Error("Live mode not implemented - would fetch real price from Raydium");
     }
+
+    if (process.env.LIVE_MODE === "stub") {
+      return this.simulatePrice();
+    }
+
+    // In live mode, this would call Raydium API
+    throw new Error("Live mode not implemented - would fetch real price from Raydium");
   }
   
   /**
