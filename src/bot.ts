@@ -228,13 +228,6 @@ export class RaydiumScalpingBot {
       price
     );
     
-    const { tpPrice, slPrice } = calculateTPSL(
-      direction,
-      price,
-      this.config.tpBps,
-      this.config.slBps
-    );
-    
     const orderResult = await this.exchange.placeMarketOrder(
       direction,
       size,
@@ -247,6 +240,7 @@ export class RaydiumScalpingBot {
       this.config.tpBps,
       this.config.slBps
     );
+
 
     this.state.position = {
       direction,
@@ -289,7 +283,7 @@ export class RaydiumScalpingBot {
     const trade: Trade = {
       direction: position.direction,
       entryPrice: position.entryPrice,
-      exitPrice,
+      exitPrice: exitFillPrice,
       size: position.size,
       pnl,
       pnlPct,
