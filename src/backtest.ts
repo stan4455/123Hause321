@@ -15,6 +15,16 @@ type HistoricalPricePoint = {
   price: number;
 };
 
+type TradingViewHistoryResponse = {
+  s: string;
+  t: number[];
+  o: number[];
+  h: number[];
+  l: number[];
+  c: number[];
+  v: number[];
+};
+
 type BinanceKline = [
   number,
   string,
@@ -54,6 +64,33 @@ function intervalToSeconds(interval: string): number | null {
   return amount * multipliers[unit];
 }
 
+function isTradingViewHistoryResponse(
+  payload: unknown
+): payload is TradingViewHistoryResponse {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+  const candidate = payload as TradingViewHistoryResponse;
+  return (
+    typeof candidate.s === "string" &&
+    Array.isArray(candidate.t) &&
+    Array.isArray(candidate.c)
+  );
+}
+
+function mapTradingViewHistoryToCandles(
+  payload: TradingViewHistoryResponse
+): Candle[] {
+  if (!payload.t.length || !payload.c.length) {
+    return [];
+  }
+  const limit = Math.min(payload.t.length, payload.c.length);
+  return payload.t.slice(0, limit).map((timestamp, index) => ({
+    timestamp: new Date(timestamp * 1000),
+    price: Number(payload.c[index]),
+  }));
+}
+
 async function fetchHistoricalPrices(): Promise<Candle[]> {
   const apiUrl = process.env.HISTORICAL_API_URL;
   if (apiUrl) {
@@ -61,14 +98,21 @@ async function fetchHistoricalPrices(): Promise<Candle[]> {
     if (!response.ok) {
       throw new Error(`Historical API error: ${response.status} ${response.statusText}`);
     }
-    const payload = (await response.json()) as HistoricalPricePoint[];
-    if (!Array.isArray(payload)) {
-      throw new Error("Historical API response must be an array");
+    const payload = (await response.json()) as
+      | HistoricalPricePoint[]
+      | TradingViewHistoryResponse;
+    if (Array.isArray(payload)) {
+      return payload.map((point) => ({
+        timestamp: parseTimestamp(point.timestamp),
+        price: point.price,
+      }));
     }
-    return payload.map((point) => ({
-      timestamp: parseTimestamp(point.timestamp),
-      price: point.price,
-    }));
+    if (isTradingViewHistoryResponse(payload)) {
+      return mapTradingViewHistoryToCandles(payload);
+    }
+    throw new Error(
+      "Historical API response must be an array or TradingView history payload"
+    );
   }
 
   const symbol = process.env.BACKTEST_SYMBOL ?? "BTCUSDT";
