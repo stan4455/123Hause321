@@ -24,7 +24,7 @@ This is a fully functional scalping bot for Raydium Perpetuals on Solana. The bo
 ✅ **Trading Modes**
 - **quote**: Simulated trading with no execution
 - **paper**: Simulated trading for testing strategies
-- **live**: Real trading (requires Raydium SDK integration - not implemented)
+- **live**: Stubbed live trading by default (`LIVE_MODE=stub`) with log output; real trading requires Raydium SDK integration (not implemented)
 
 ## Installation
 
