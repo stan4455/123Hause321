@@ -90,6 +90,7 @@ Required:
 
 For live trading, you must also set:
 - LIVE_TRADING=1 (safety flag to prevent accidental real trading)
+- LIVE_MODE=stub (default) or real (real trading integration not implemented)
 
 ## How to Run
 
@@ -186,7 +187,7 @@ Bot initialized in paper mode
     ✓ TP | Consec losses: 0
 ```
 
-### Live Mode (Real Trading - USE WITH CAUTION)
+### Live Mode (Stubbed Live Trading - USE WITH CAUTION)
 
 ⚠️ **WARNING:** Live mode uses real money. Only use on testnet or with funds you can afford to lose.
 
@@ -194,12 +195,13 @@ Bot initialized in paper mode
 # Edit .env to set MODE=live AND LIVE_TRADING=1
 # MODE=live
 # LIVE_TRADING=1
+# LIVE_MODE=stub
 
 # Run the bot
 npm start
 ```
 
-**Note:** Real Raydium Perps integration is not yet implemented. The bot will fail with an error explaining that live mode requires implementation.
+**Note:** Live mode runs in stub mode by default (`LIVE_MODE=stub`) and simulates fills while logging live-style actions. Set `LIVE_MODE=real` only after implementing the real Raydium Perps integration (currently not implemented and will throw an error).
 
 ### Running Tests
 
