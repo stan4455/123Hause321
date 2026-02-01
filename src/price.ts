@@ -9,9 +9,11 @@ export class PriceProvider {
   private basePrice: number;
   private lastUpdate: Date;
   private volatility: number;
+  private useSimulation: boolean;
   
-  constructor(config: Config) {
+  constructor(config: Config, useSimulation: boolean = false) {
     this.config = config;
+    this.useSimulation = useSimulation;
     // BTC starting price (simulated)
     this.basePrice = 45000;
     this.lastUpdate = new Date();
@@ -21,10 +23,10 @@ export class PriceProvider {
   /**
    * Get current index price
    * In quote/paper mode: simulated random walk
-   * In live mode: would fetch from Raydium
+   * In live mode: would fetch from Raydium (or simulate if useSimulation is true)
    */
   async getIndexPrice(): Promise<number> {
-    if (this.config.mode === "quote" || this.config.mode === "paper") {
+    if (this.config.mode === "quote" || this.config.mode === "paper" || this.useSimulation) {
       return this.simulatePrice();
     }
 
