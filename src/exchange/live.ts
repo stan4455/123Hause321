@@ -18,8 +18,9 @@ export class LiveExchangeAdapter implements ExchangeAdapter {
 
   constructor(config: Config) {
     this.config = config;
-    this.priceProvider = new PriceProvider(config);
     this.mode = this.resolveMode();
+    // Use simulated prices in stub mode, otherwise real prices (when implemented)
+    this.priceProvider = new PriceProvider(config, this.mode === "stub");
   }
 
   async getPrice(): Promise<number> {
