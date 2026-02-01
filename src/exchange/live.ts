@@ -20,7 +20,8 @@ export class LiveExchangeAdapter implements ExchangeAdapter {
     this.config = config;
     this.mode = this.resolveMode();
     // Use simulated prices in stub mode, otherwise real prices (when implemented)
-    this.priceProvider = new PriceProvider(config, this.mode === "stub");
+    const useSimulatedPrices = this.mode === "stub";
+    this.priceProvider = new PriceProvider(config, useSimulatedPrices);
   }
 
   async getPrice(): Promise<number> {
