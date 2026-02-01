@@ -1,4 +1,4 @@
-import type { Candle } from "./types.js";
+import type { Candle } from "../types.js";
 
 /**
  * Calculate Exponential Moving Average (EMA)

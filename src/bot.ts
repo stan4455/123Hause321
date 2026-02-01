@@ -1,15 +1,15 @@
 import type { Config } from "./config.js";
 import type { BotState, Candle, Direction, Position, Trade } from "./types.js";
-import { calculateEMA, determineTrend } from "./indicators.js";
+import { calculateEMA, determineTrend } from "./indicators/ema.js";
 import {
   calculateTPSL,
   calculatePositionSize,
   calculatePnL,
   checkTPSL,
   flipDirection,
-  checkKillSwitch,
-  checkCooldown,
-} from "./trading.js";
+} from "./strategy/strategy.js";
+import { checkKillSwitch } from "./risk/killSwitch.js";
+import { checkCooldown, resetHourlyCounters, resetDailyCounters } from "./state/stateMachine.js";
 import { PriceProvider } from "./price.js";
 
 /**
@@ -139,10 +139,10 @@ export class RaydiumScalpingBot {
     }
     
     // Reset hourly counters if needed
-    this.resetHourlyCounters();
+    resetHourlyCounters(this.state);
     
     // Reset daily counters if needed
-    this.resetDailyCounters();
+    resetDailyCounters(this.state);
   }
   
   /**
@@ -320,34 +320,6 @@ export class RaydiumScalpingBot {
       `Pos: ${posStr} | ` +
       `Equity: $${this.state.currentEquity.toFixed(2)}`
     );
-  }
-  
-  /**
-   * Reset hourly counters
-   */
-  private resetHourlyCounters(): void {
-    const now = new Date();
-    const elapsed = now.getTime() - this.state.hourStartTime.getTime();
-    
-    if (elapsed >= 3600000) {
-      // 1 hour
-      this.state.tradesThisHour = 0;
-      this.state.hourStartTime = now;
-    }
-  }
-  
-  /**
-   * Reset daily counters
-   */
-  private resetDailyCounters(): void {
-    const now = new Date();
-    const elapsed = now.getTime() - this.state.dailyStartTime.getTime();
-    
-    if (elapsed >= 86400000) {
-      // 24 hours
-      this.state.dailyStartEquity = this.state.currentEquity;
-      this.state.dailyStartTime = now;
-    }
   }
   
   /**

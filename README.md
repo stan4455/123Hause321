@@ -87,3 +87,182 @@ Required:
 - MAX_CONSEC_LOSSES=10
 - MAX_TRADES_PER_HOUR=120
 - MAX_CONSEC_ERRORS=20
+
+For live trading, you must also set:
+- LIVE_TRADING=1 (safety flag to prevent accidental real trading)
+
+## How to Run
+
+### Installation
+
+```bash
+npm install
+npm run build
+```
+
+### Quote Mode (Logs Only, No Simulated Execution)
+
+Quote mode shows what the bot *would* do without executing any trades (even simulated ones).
+
+```bash
+# Create .env file from example
+cp .env.example .env
+
+# Edit .env to set MODE=quote (default)
+# MODE=quote
+
+# Run the bot
+npm start
+```
+
+**Expected Output:**
+```
+============================================================
+Raydium Perps Scalping Bot
+============================================================
+Bot initialized in quote mode
+Initial equity: $10000
+Market: BTC-PERP
+Strategy: EMA(9)/EMA(21) on 15s candles
+TP: 10bps, SL: 10bps
+Max leverage: 50x, Margin: 2%
+
+=== Bot started ===
+
+[2026-02-01T12:00:00.000Z] Price: $45000.00 | EMA9: N/A | EMA21: N/A | Trend: NEUTRAL | Pos: None | Equity: $10000.00
+[2026-02-01T12:00:15.000Z] Price: $45001.23 | EMA9: N/A | EMA21: N/A | Trend: NEUTRAL | Pos: None | Equity: $10000.00
+...
+[2026-02-01T12:05:00.000Z] Price: $45010.50 | EMA9: 45005.23 | EMA21: 45003.12 | Trend: UP | Pos: None | Equity: $10000.00
+
+[QUOTE] Would place LONG market order:
+[QUOTE]   Size: 0.222222
+[QUOTE]   Leverage: 50x
+[QUOTE]   Price: $45010.50
+
+>>> OPEN LONG position @ $45010.50
+    Size: 0.222222, Margin: $200.00, Leverage: 50x
+    TP: $45015.00, SL: $45005.50
+```
+
+### Paper Mode (Simulated Trading with Fills)
+
+Paper mode simulates order fills with realistic fees and slippage.
+
+```bash
+# Edit .env to set MODE=paper
+# MODE=paper
+
+# Run the bot
+npm start
+```
+
+**Expected Output:**
+```
+============================================================
+Raydium Perps Scalping Bot
+============================================================
+Bot initialized in paper mode
+...
+
+[PAPER] Simulated LONG market order fill:
+[PAPER]   Base price: $45010.50
+[PAPER]   Fill price: $45010.95 (with slippage)
+[PAPER]   Size: 0.222222
+[PAPER]   Leverage: 50x
+
+>>> OPEN LONG position @ $45010.95
+    Size: 0.222222, Margin: $200.00, Leverage: 50x
+    TP: $45015.45, SL: $45006.45
+
+[PAPER] Simulated close LONG position:
+[PAPER]   Entry: $45010.95
+[PAPER]   Base exit price: $45015.50
+[PAPER]   Fill price: $45015.05 (with slippage)
+[PAPER]   Size: 0.222222
+
+<<< CLOSE LONG position @ $45015.05
+    PnL: $0.41 (0.21%)
+    Equity: $10000.41
+    ✓ TP | Consec losses: 0
+```
+
+### Live Mode (Real Trading - USE WITH CAUTION)
+
+⚠️ **WARNING:** Live mode uses real money. Only use on testnet or with funds you can afford to lose.
+
+```bash
+# Edit .env to set MODE=live AND LIVE_TRADING=1
+# MODE=live
+# LIVE_TRADING=1
+
+# Run the bot
+npm start
+```
+
+**Note:** Real Raydium Perps integration is not yet implemented. The bot will fail with an error explaining that live mode requires implementation.
+
+### Running Tests
+
+```bash
+npm test
+```
+
+### Development Mode
+
+```bash
+# Watch mode (rebuilds on file changes)
+npm run dev
+```
+
+## Project Structure
+
+```
+src/
+├── index.ts              # Entry point
+├── config.ts             # Configuration loader
+├── logger.ts             # Simple logging utility
+├── bot.ts                # Main bot orchestrator
+├── price.ts              # Price provider (simulated)
+├── types.ts              # TypeScript type definitions
+├── indicators/
+│   ├── ema.ts            # EMA calculation and trend detection
+│   └── ema.test.ts       # EMA tests
+├── strategy/
+│   ├── strategy.ts       # TP/SL, position size, PnL calculations
+│   └── strategy.test.ts  # Strategy tests
+├── state/
+│   ├── stateMachine.ts   # Cooldown, counter resets
+│   └── stateMachine.test.ts # State machine tests
+├── exchange/
+│   ├── types.ts          # Exchange adapter interface
+│   ├── quote.ts          # Quote mode (logs only)
+│   └── paper.ts          # Paper mode (simulated fills)
+└── risk/
+    ├── killSwitch.ts     # Kill switch logic
+    └── killSwitch.test.ts # Kill switch tests
+```
+
+## Safety Features
+
+- **Kill Switch:** Automatically disables trading when:
+  - Daily loss exceeds configured limit (default: 1.0%)
+  - Consecutive losses exceed limit (default: 10)
+  - Consecutive errors exceed limit (default: 20)
+  - Trades per hour exceed limit (default: 120)
+
+- **Cooldown:** Enforced minimum time between trades:
+  - Paper mode: 200ms
+  - Live mode: 2000ms (hard minimum)
+
+- **Live Trading Safety:** Requires explicit `LIVE_TRADING=1` environment variable to prevent accidental real trading.
+
+## CI/CD
+
+GitHub Actions workflow runs on every push:
+- `npm ci` - Clean dependency install
+- `npm run build` - TypeScript compilation
+- `npm test` - Unit tests
+
+## Development Guidelines
+
+See `.github/copilot-instructions.md` for project conventions and best practices.

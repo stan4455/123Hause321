@@ -1,5 +1,4 @@
-import type { Config } from "./config.js";
-import type { BotState, Direction, Position } from "./types.js";
+import type { Direction, Position } from "../types.js";
 
 /**
  * Calculate TP and SL prices for a position
@@ -93,67 +92,4 @@ export function checkTPSL(
  */
 export function flipDirection(direction: Direction): Direction {
   return direction === "LONG" ? "SHORT" : "LONG";
-}
-
-/**
- * Check if kill switch should be triggered
- */
-export function checkKillSwitch(
-  state: BotState,
-  config: Config
-): { triggered: boolean; reason: string | null } {
-  // Daily loss check
-  const dailyLossPct =
-    ((state.dailyStartEquity - state.currentEquity) / state.dailyStartEquity) *
-    100;
-  if (dailyLossPct >= config.maxDailyLossPct) {
-    return {
-      triggered: true,
-      reason: `Daily loss ${dailyLossPct.toFixed(2)}% >= ${config.maxDailyLossPct}%`,
-    };
-  }
-  
-  // Consecutive losses check
-  if (state.consecLosses >= config.maxConsecLosses) {
-    return {
-      triggered: true,
-      reason: `Consecutive losses ${state.consecLosses} >= ${config.maxConsecLosses}`,
-    };
-  }
-  
-  // Consecutive errors check
-  if (state.consecErrors >= config.maxConsecErrors) {
-    return {
-      triggered: true,
-      reason: `Consecutive errors ${state.consecErrors} >= ${config.maxConsecErrors}`,
-    };
-  }
-  
-  // Trades per hour check
-  if (state.tradesThisHour >= config.maxTradesPerHour) {
-    return {
-      triggered: true,
-      reason: `Trades this hour ${state.tradesThisHour} >= ${config.maxTradesPerHour}`,
-    };
-  }
-  
-  return { triggered: false, reason: null };
-}
-
-/**
- * Check if cooldown period has elapsed
- */
-export function checkCooldown(
-  state: BotState,
-  config: Config
-): boolean {
-  if (!state.lastTradeTime) {
-    return true;
-  }
-  
-  const cooldownMs =
-    config.mode === "live" ? config.cooldownMsLive : config.cooldownMsPaper;
-  const elapsed = Date.now() - state.lastTradeTime.getTime();
-  
-  return elapsed >= cooldownMs;
 }
