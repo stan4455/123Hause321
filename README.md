@@ -91,6 +91,7 @@ Required:
 For live trading, you must also set:
 - LIVE_TRADING=1 (safety flag to prevent accidental real trading)
 - LIVE_MODE=stub (default) or real (real trading integration not implemented)
+- PRICE_API_URL=https://example.com/price (must return JSON: {"price": 45000.12})
 
 ## How to Run
 
@@ -201,12 +202,31 @@ Bot initialized in paper mode
 npm start
 ```
 
-**Note:** Live mode runs in stub mode by default (`LIVE_MODE=stub`) and simulates fills while logging live-style actions. Set `LIVE_MODE=real` only after implementing the real Raydium Perps integration (currently not implemented and will throw an error).
+**Note:** Live mode runs in stub mode by default (`LIVE_MODE=stub`) and simulates fills while logging live-style actions. Live pricing uses `PRICE_API_URL` and expects JSON in the shape `{ "price": 45000.12 }`. Set `LIVE_MODE=real` only after implementing the real Raydium Perps integration (currently not implemented and will throw an error).
 
 ### Running Tests
 
 ```bash
 npm test
+```
+
+### Backtest (Historical Data via API)
+
+Backtest uses either a custom historical API (JSON array of `{ timestamp, price }`) or falls back to Binance BTCUSDT klines.
+
+```bash
+# Build first
+npm run build
+
+# Optional: customize source (otherwise Binance BTCUSDT 1m candles are used)
+# HISTORICAL_API_URL=https://example.com/history
+# BACKTEST_SYMBOL=BTCUSDT
+# BACKTEST_INTERVAL=1m
+# BACKTEST_LIMIT=1000
+# BACKTEST_INITIAL_EQUITY=10000
+
+# Run backtest
+npm run backtest
 ```
 
 ### Development Mode

@@ -27,6 +27,9 @@ export interface Config {
   // Cooldown
   cooldownMsPaper: number;
   cooldownMsLive: number;
+
+  // Live pricing
+  priceApiUrl?: string;
   
   // Kill switch
   maxDailyLossPct: number;
@@ -74,6 +77,11 @@ export function loadConfig(): Config {
       );
     }
   }
+
+  const priceApiUrl = process.env.PRICE_API_URL;
+  if (mode === "live" && !priceApiUrl) {
+    throw new Error("Missing required env var for live pricing: PRICE_API_URL");
+  }
   
   return {
     rpcUrl: getEnv("RPC_URL", "https://api.mainnet-beta.solana.com"),
@@ -94,5 +102,6 @@ export function loadConfig(): Config {
     maxConsecLosses: getEnvNumber("MAX_CONSEC_LOSSES", 10),
     maxTradesPerHour: getEnvNumber("MAX_TRADES_PER_HOUR", 120),
     maxConsecErrors: getEnvNumber("MAX_CONSEC_ERRORS", 20),
+    priceApiUrl,
   };
 }
