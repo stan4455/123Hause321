@@ -241,6 +241,7 @@ export class RaydiumScalpingBot {
       this.config.slBps
     );
 
+
     this.state.position = {
       direction,
       entryPrice,
