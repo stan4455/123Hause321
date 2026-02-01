@@ -21,15 +21,26 @@ export class PriceProvider {
   /**
    * Get current index price
    * In quote/paper mode: simulated random walk
-   * In live mode: would fetch from Raydium
+   * In live mode: fetch from configured price API
    */
   async getIndexPrice(): Promise<number> {
     if (this.config.mode === "quote" || this.config.mode === "paper") {
       return this.simulatePrice();
-    } else {
-      // In live mode, this would call Raydium API
-      throw new Error("Live mode not implemented - would fetch real price from Raydium");
     }
+
+    if (!this.config.priceApiUrl) {
+      throw new Error("PRICE_API_URL is required in live mode");
+    }
+
+    const response = await fetch(this.config.priceApiUrl);
+    if (!response.ok) {
+      throw new Error(`Price API error: ${response.status} ${response.statusText}`);
+    }
+    const payload = (await response.json()) as { price?: number };
+    if (typeof payload.price !== "number") {
+      throw new Error("Price API response missing numeric 'price' field");
+    }
+    return payload.price;
   }
   
   /**

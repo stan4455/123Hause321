@@ -91,6 +91,7 @@ Required:
 For live trading, you must also set:
 - LIVE_TRADING=1 (safety flag to prevent accidental real trading)
 - LIVE_MODE=stub (default) or real (real trading integration not implemented)
+- PRICE_API_URL=https://example.com/price (must return JSON: {"price": 45000.12})
 
 ## How to Run
 
@@ -201,7 +202,7 @@ Bot initialized in paper mode
 npm start
 ```
 
-**Note:** Live mode runs in stub mode by default (`LIVE_MODE=stub`) and simulates fills while logging live-style actions. Set `LIVE_MODE=real` only after implementing the real Raydium Perps integration (currently not implemented and will throw an error).
+**Note:** Live mode runs in stub mode by default (`LIVE_MODE=stub`) and simulates fills while logging live-style actions. Live pricing uses `PRICE_API_URL` and expects JSON in the shape `{ "price": 45000.12 }`. Set `LIVE_MODE=real` only after implementing the real Raydium Perps integration (currently not implemented and will throw an error).
 
 ### Running Tests
 
