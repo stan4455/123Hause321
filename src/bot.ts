@@ -10,7 +10,10 @@ import {
 } from "./strategy/strategy.js";
 import { checkKillSwitch } from "./risk/killSwitch.js";
 import { checkCooldown, resetHourlyCounters, resetDailyCounters } from "./state/stateMachine.js";
-import { PriceProvider } from "./price.js";
+import type { ExchangeAdapter } from "./exchange/types.js";
+import { QuoteExchangeAdapter } from "./exchange/quote.js";
+import { PaperExchangeAdapter } from "./exchange/paper.js";
+import { LiveExchangeAdapter } from "./exchange/live.js";
 
 /**
  * Raydium Perps Scalping Bot
@@ -31,13 +34,13 @@ import { PriceProvider } from "./price.js";
 export class RaydiumScalpingBot {
   private config: Config;
   private state: BotState;
-  private priceProvider: PriceProvider;
+  private exchange: ExchangeAdapter;
   private candles: Candle[];
   private running: boolean;
   
   constructor(config: Config, initialEquity: number = 10000) {
     this.config = config;
-    this.priceProvider = new PriceProvider(config);
+    this.exchange = RaydiumScalpingBot.createExchange(config);
     this.candles = [];
     this.running = false;
     
@@ -65,6 +68,19 @@ export class RaydiumScalpingBot {
     console.log(`Strategy: EMA(${config.emaFast})/EMA(${config.emaSlow}) on ${config.tfSeconds}s candles`);
     console.log(`TP: ${config.tpBps}bps, SL: ${config.slBps}bps`);
     console.log(`Max leverage: ${config.maxLeverage}x, Margin: ${config.marginPct}%`);
+  }
+
+  private static createExchange(config: Config): ExchangeAdapter {
+    switch (config.mode) {
+      case "quote":
+        return new QuoteExchangeAdapter(config);
+      case "paper":
+        return new PaperExchangeAdapter(config);
+      case "live":
+        return new LiveExchangeAdapter(config);
+      default:
+        return new QuoteExchangeAdapter(config);
+    }
   }
   
   /**
@@ -108,7 +124,7 @@ export class RaydiumScalpingBot {
    */
   private async tick(): Promise<void> {
     // Get current price
-    const currentPrice = await this.priceProvider.getIndexPrice();
+    const currentPrice = await this.exchange.getPrice();
     const now = new Date();
     
     // Add candle
@@ -219,23 +235,38 @@ export class RaydiumScalpingBot {
       this.config.slBps
     );
     
+    const orderResult = await this.exchange.placeMarketOrder(
+      direction,
+      size,
+      this.config.maxLeverage
+    );
+    const entryPrice = orderResult.fillPrice;
+    const adjustedTargets = calculateTPSL(
+      direction,
+      entryPrice,
+      this.config.tpBps,
+      this.config.slBps
+    );
+
     this.state.position = {
       direction,
-      entryPrice: price,
+      entryPrice,
       size,
       margin,
       leverage: this.config.maxLeverage,
-      tpPrice,
-      slPrice,
+      tpPrice: adjustedTargets.tpPrice,
+      slPrice: adjustedTargets.slPrice,
       openedAt: new Date(),
     };
     
     this.state.lastTradeTime = new Date();
     this.state.tradesThisHour++;
     
-    console.log(`\n>>> OPEN ${direction} position @ $${price.toFixed(2)}`);
+    console.log(`\n>>> OPEN ${direction} position @ $${entryPrice.toFixed(2)}`);
     console.log(`    Size: ${size.toFixed(6)}, Margin: $${margin.toFixed(2)}, Leverage: ${this.config.maxLeverage}x`);
-    console.log(`    TP: $${tpPrice.toFixed(2)}, SL: $${slPrice.toFixed(2)}`);
+    console.log(
+      `    TP: $${adjustedTargets.tpPrice.toFixed(2)}, SL: $${adjustedTargets.slPrice.toFixed(2)}`
+    );
   }
   
   /**
@@ -247,7 +278,9 @@ export class RaydiumScalpingBot {
     hitSl: boolean
   ): Promise<void> {
     const position = this.state.position!;
-    const { pnl, pnlPct } = calculatePnL(position, exitPrice, this.config.feeBps);
+    const closeResult = await this.exchange.closePosition(position);
+    const exitFillPrice = closeResult.fillPrice;
+    const { pnl, pnlPct } = calculatePnL(position, exitFillPrice, this.config.feeBps);
     
     // Update equity
     this.state.currentEquity += pnl;
@@ -274,7 +307,9 @@ export class RaydiumScalpingBot {
       this.state.consecLosses++;
     }
     
-    console.log(`\n<<< CLOSE ${position.direction} position @ $${exitPrice.toFixed(2)}`);
+    console.log(
+      `\n<<< CLOSE ${position.direction} position @ $${exitFillPrice.toFixed(2)}`
+    );
     console.log(`    PnL: $${pnl.toFixed(2)} (${pnlPct.toFixed(2)}%)`);
     console.log(`    Equity: $${this.state.currentEquity.toFixed(2)}`);
     console.log(`    ${hitTp ? "✓ TP" : "✗ SL"} | Consec losses: ${this.state.consecLosses}`);
