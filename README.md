@@ -210,6 +210,25 @@ npm start
 npm test
 ```
 
+### Backtest (Historical Data via API)
+
+Backtest uses either a custom historical API (JSON array of `{ timestamp, price }`) or falls back to Binance BTCUSDT klines.
+
+```bash
+# Build first
+npm run build
+
+# Optional: customize source (otherwise Binance BTCUSDT 1m candles are used)
+# HISTORICAL_API_URL=https://example.com/history
+# BACKTEST_SYMBOL=BTCUSDT
+# BACKTEST_INTERVAL=1m
+# BACKTEST_LIMIT=1000
+# BACKTEST_INITIAL_EQUITY=10000
+
+# Run backtest
+npm run backtest
+```
+
 ### Development Mode
 
 ```bash
